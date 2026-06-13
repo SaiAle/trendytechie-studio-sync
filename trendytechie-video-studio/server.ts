@@ -103,7 +103,7 @@ app.post("/api/generate-project-analytics", async (req, res) => {
   } catch (error: any) {
     console.error("Analytics generation error:", error.message || error);
     return res.status(200).json({
-      report: `### Telemetry Connection Log\n\n*Error generating report with Gemini: ${error.message || "Key not set"}. Here is our offline metrics analysis fallback:*\n\n**Weekly Summary metrics for ${projectName || "Untitled"}**\n- **Project Speed**: High throughput with ${updatesCount || 0} collaborative actions.\n- **Timeline coverage**: fully rendered across ${duration || 5} seconds with ${tracksCount || 0} track feeds.\n- **Security Posture**: encrypted status is ${encryptStatus ? "secured with AES-GCM 256 keys" : "pending verification"}.`
+      report: `### Telemetry Connection Log\n\n*Error generating report with Gemini: ${error.message || "Key not set"}. Here is our offline metrics analysis fallback:*\n\n**Weekly Summary metrics[...]
     });
   }
 });
@@ -182,7 +182,7 @@ app.post("/api/github/push", async (req, res) => {
         repoExists = true;
         appendLog(`[SYSTEM] Repository found. Connecting to existing branch context: ${targetBranch}`);
       } else if (checkRes.status === 404) {
-        appendLog(`[SYSTEM] Repo not found on GitHub. Auto generating new repo with public auto_init...`);
+        appendLog(`[SYSTEM] Repo not found on GitHub. Auto generating new repo with private default...`);
         const createRes = await fetch("https://api.github.com/user/repos", {
           method: "POST",
           headers: {
@@ -192,7 +192,7 @@ app.post("/api/github/push", async (req, res) => {
           body: JSON.stringify({
             name: repoName,
             description: `TrendyTechie Video Studio Workspace backup: ${projectData?.name || "Untitled Project"}`,
-            private: false,
+            private: true,
             auto_init: true,
           }),
         });
@@ -203,7 +203,7 @@ app.post("/api/github/push", async (req, res) => {
         }
         
         repoExists = true;
-        appendLog(`[SYSTEM] Created new repository '${repoName}' successfully with standard commits initialized.`);
+        appendLog(`[SYSTEM] Created new private repository '${repoName}' successfully with standard commits initialized.`);
         // Sleep 1.5 seconds for GitHub DB eventual consistency
         await new Promise((resolve) => setTimeout(resolve, 1500));
       } else {
@@ -220,7 +220,7 @@ app.post("/api/github/push", async (req, res) => {
     // Always push custom README and project-data.json
     const beautifulReadme = `# 🎬 TrendyTechie Video Studio Workspace - ${projectData?.name || "Untitled"}
 
-This repository was automatically generated and synced using **TrendyTechie Studio** collaborative workspace. It contains the full codebase and pre-configured timelines ready for direct execution.
+This repository was automatically generated and synced using **TrendyTechie Studio** collaborative workspace. It contains the full codebase and pre-configured timelines ready for direct execution[...]
 
 ## 📊 Sequencing Project Meta Diagnostics
 - **Project Title**: \`${projectData?.name || "Untitled Video"}\`
