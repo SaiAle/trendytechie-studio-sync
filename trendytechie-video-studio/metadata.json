@@ -1,0 +1,6 @@
+{
+  "name": "TrendyTechie Video Studio",
+  "description": "A collaborative personal-built video workstation supporting text-to-video space, image-to-video simulations, responsive multi-track custom timelines, and real-time Firestore sync with automated backups.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

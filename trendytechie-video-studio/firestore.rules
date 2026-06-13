@@ -1,0 +1,132 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global Safety Net default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Common security primitive helpers (Phase 3 & 4)
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    // --- Users Collection ---
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && 
+                    isEmailVerified() &&
+                    userId == request.auth.uid && 
+                    incoming().userId == userId && 
+                    incoming().email == request.auth.token.email && 
+                    incoming().displayName is string &&
+                    incoming().displayName.size() <= 100 &&
+                    incoming().keys().hasAll(['userId', 'displayName', 'email', 'createdAt']) && 
+                    incoming().keys().size() == 4 &&
+                    incoming().createdAt == request.time;
+
+      allow update: if isSignedIn() && 
+                    isEmailVerified() &&
+                    userId == request.auth.uid && 
+                    incoming().userId == userId && 
+                    incoming().email == request.auth.token.email && 
+                    incoming().diff(resource.data).affectedKeys().hasOnly(['displayName']);
+    }
+
+    // --- Projects Collection ---
+    match /projects/{projectId} {
+      function isProjectOwner(proj) {
+        return proj.ownerId == request.auth.uid;
+      }
+      function isProjectCollaborator(proj) {
+        return request.auth.uid in proj.collaboratorIds;
+      }
+      function isMember(proj) {
+        return isProjectOwner(proj) || isProjectCollaborator(proj);
+      }
+
+      allow get: if isSignedIn() && isMember(resource.data);
+      allow list: if isSignedIn() && (resource.data.ownerId == request.auth.uid || request.auth.uid in resource.data.collaboratorIds);
+
+      allow create: if isSignedIn() && 
+                    isEmailVerified() &&
+                    isValidId(projectId) &&
+                    incoming().projectId == projectId &&
+                    incoming().ownerId == request.auth.uid &&
+                    incoming().collaboratorIds is list &&
+                    incoming().collaboratorIds.size() <= 10 &&
+                    incoming().name is string &&
+                    incoming().name.size() <= 200 &&
+                    incoming().aspectRatio in ['16:9', '9:16', '1:1'] &&
+                    incoming().duration is number &&
+                    incoming().keys().hasAll(['projectId', 'name', 'description', 'aspectRatio', 'duration', 'ownerId', 'collaboratorIds', 'createdAt', 'updatedAt']) &&
+                    incoming().keys().size() == 9 &&
+                    incoming().createdAt == request.time &&
+                    incoming().updatedAt == request.time;
+
+      allow update: if isSignedIn() && 
+                    isEmailVerified() &&
+                    isMember(resource.data) &&
+                    incoming().projectId == projectId &&
+                    incoming().ownerId == resource.data.ownerId &&
+                    incoming().createdAt == resource.data.createdAt &&
+                    incoming().updatedAt == request.time &&
+                    incoming().name is string && incoming().name.size() <= 200 &&
+                    incoming().collaboratorIds is list && incoming().collaboratorIds.size() <= 10 &&
+                    (
+                      // Owner can edit all project parameters
+                      (isProjectOwner(resource.data) && incoming().keys().hasAll(['projectId', 'name', 'description', 'aspectRatio', 'duration', 'ownerId', 'collaboratorIds', 'createdAt', 'updatedAt']) && incoming().keys().size() == 9) ||
+                      // Collaborators are restricted from updating collaboratorIds or aspectRatio
+                      (isProjectCollaborator(resource.data) && incoming().diff(resource.data).affectedKeys().hasOnly(['name', 'description', 'duration', 'updatedAt']))
+                    );
+
+      allow delete: if isSignedIn() && isEmailVerified() && isProjectOwner(resource.data);
+
+      // --- Tracks Subcollection ---
+      match /tracks/{trackId} {
+        function getProject() {
+          return get(/databases/$(database)/documents/projects/$(projectId)).data;
+        }
+
+        allow get: if isSignedIn() && isMember(getProject());
+        allow list: if isSignedIn() && isMember(getProject());
+
+        allow create: if isSignedIn() &&
+                      isEmailVerified() &&
+                      isValidId(trackId) &&
+                      incoming().trackId == trackId &&
+                      incoming().projectId == projectId &&
+                      isMember(getProject()) &&
+                      incoming().type in ['video', 'voiceover', 'music', 'text'] &&
+                      incoming().startTime is number &&
+                      incoming().duration is number &&
+                      incoming().createdAt == request.time &&
+                      incoming().keys().hasAll(['trackId', 'projectId', 'type', 'startTime', 'duration', 'prompt', 'sourceUrl', 'voiceName', 'script', 'createdAt']) &&
+                      incoming().keys().size() == 10;
+
+        allow update: if isSignedIn() &&
+                      isEmailVerified() &&
+                      isMember(getProject()) &&
+                      incoming().trackId == trackId &&
+                      incoming().projectId == projectId &&
+                      incoming().createdAt == resource.data.createdAt &&
+                      incoming().diff(resource.data).affectedKeys().hasOnly(['startTime', 'duration', 'prompt', 'sourceUrl', 'voiceName', 'script']);
+
+        allow delete: if isSignedIn() && isEmailVerified() && isMember(getProject());
+      }
+    }
+  }
+}

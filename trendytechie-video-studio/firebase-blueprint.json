@@ -1,0 +1,131 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Public profile information for a user",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The unique Firebase Auth user ID"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "The user's readable name"
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's verified business email"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The signup timestamp"
+        }
+      },
+      "required": ["userId", "displayName", "email", "createdAt"]
+    },
+    "Project": {
+      "title": "Project",
+      "description": "A collaborative LTX video generation project",
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "description": "Unique identifier for the project"
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the video project"
+        },
+        "description": {
+          "type": "string",
+          "description": "Summary or purpose"
+        },
+        "aspectRatio": {
+          "type": "string",
+          "enum": ["16:9", "9:16", "1:1"],
+          "description": "The visual format/layout"
+        },
+        "duration": {
+          "type": "number",
+          "description": "Configured timeline length in seconds"
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "Creator of the project"
+        },
+        "collaboratorIds": {
+          "type": "array",
+          "description": "List of user IDs who have edit access (max 10)",
+          "items": { "type": "string" }
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Latest edit timestamp"
+        }
+      },
+      "required": ["projectId", "name", "aspectRatio", "duration", "ownerId", "collaboratorIds", "createdAt", "updatedAt"]
+    },
+    "Track": {
+      "title": "Timeline Track",
+      "description": "A media track in the project editor timeline",
+      "type": "object",
+      "properties": {
+        "trackId": {
+          "type": "string"
+        },
+        "projectId": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["video", "voiceover", "music", "text"]
+        },
+        "startTime": {
+          "type": "number"
+        },
+        "duration": {
+          "type": "number"
+        },
+        "prompt": {
+          "type": "string"
+        },
+        "sourceUrl": {
+          "type": "string"
+        },
+        "voiceName": {
+          "type": "string"
+        },
+        "script": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["trackId", "projectId", "type", "startTime", "duration", "createdAt"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "Stored user collection"
+    },
+    "projects/{projectId}": {
+      "schema": "Project",
+      "description": "Main projects collection"
+    },
+    "projects/{projectId}/tracks/{trackId}": {
+      "schema": "Track",
+      "description": "Subcollection of media tracks for the timeline editor"
+    }
+  }
+}
